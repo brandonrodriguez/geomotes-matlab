@@ -148,12 +148,14 @@ for n = 1:programSettings.numberOfMotes
    fileID = fopen(filename, 'w');
    pause(1);
    while programSettings.port.BytesAvailable > 0
-      fprintf(fileID, '%d\n', fscanf(programSettings.port, '%d')); 
-      %fscanf(programSettings.port)
+       programSettings.port.BytesAvailable
+       fprintf(fileID, '%d\n', fscanf(programSettings.port, '%d')); 
+       %fprintf(fileID, '%c\n', fscanf(programSettings.port, '%c'))
    end
    fclose(fileID);
-   graphData();
+   
 end
+graphData();
 end
 
 function graphData()
