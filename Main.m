@@ -22,7 +22,7 @@ function varargout = Main(varargin)
 
 % Edit the above text to modify the response to help Main
 
-% Last Modified by GUIDE v2.5 09-Feb-2014 14:51:06
+% Last Modified by GUIDE v2.5 19-Feb-2014 09:21:54
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -94,13 +94,13 @@ end
 %  Set Gain to 1
 function setRadioDefaults()
 global programSettings;
-fprintf(programSettings.port, 'C');
+%fprintf(programSettings.port, 'C');
 pause(1);
-fprintf(programSettings.port, 'F1');
+%fprintf(programSettings.port, 'F1');
 pause(1);
-fprintf(programSettings.port, 'PL');
+%fprintf(programSettings.port, 'PL');
 pause(1);
-fprintf(programSettings.port, 'G1');
+%fprintf(programSettings.port, 'G1');
 end
 
 
@@ -142,31 +142,36 @@ programSettings.filenames = containers.Map(0, 'null');
 for n = 1:programSettings.numberOfMotes
    command = strcat('T', int2str(n));
    fprintf(programSettings.port, command);
-   filename = strcat(date, ' ', int2str(n), ' ', int2str(round(cputime)), '.txt');
+   pause(0.5);
+   filename = strcat(date, '-', int2str(n), '-', int2str(round(cputime)), '.txt');
    tempMap = containers.Map(n, filename);
    programSettings.filenames = [programSettings.filenames; tempMap];
    fileID = fopen(filename, 'w');
-   pause(1);
    while programSettings.port.BytesAvailable > 0
-       programSettings.port.BytesAvailable
-       fprintf(fileID, '%d\n', fscanf(programSettings.port, '%d')); 
+       b = fscanf(programSettings.port, '%u');
+       if b > 8000
+        fprintf(fileID, '%u\n', b);
+       end
        %fprintf(fileID, '%c\n', fscanf(programSettings.port, '%c'))
    end
    fclose(fileID);
-   
+   pause(1);
 end
 graphData();
 end
 
 function graphData()
+cla;
 global programSettings;
+c = ['r','g','b'];
 hold all;
 for n = 1:(programSettings.numberOfMotes)
     y = load(programSettings.filenames(n));
     l = size(y);
-    plot(1:l(1), y);
+    plot(1:l(1), y, c(n));
 end
 hold off;
+programSettings.filenames = containers.Map(0, 'null');
 end
 
 
@@ -191,7 +196,7 @@ function popupmenu2_Callback(hObject, eventdata, handles)
 % Hints: contents = cellstr(get(hObject,'String')) returns popupmenu2 contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from popupmenu2
 
-value = get(hObject,'Value');
+value = get(hObject,'Value')
 message = strcat('F', num2str(value));
 global programSettings;
 fprintf(programSettings.port, message);
@@ -292,7 +297,8 @@ function edit1_Callback(hObject, eventdata, handles)
 %        str2double(get(hObject,'String')) returns contents of edit1 as a double
 global programSettings;
 motes = get(hObject,'String');
-programSettings.numberOfMotes = motes;
+n = str2num(motes);
+programSettings.numberOfMotes = n;
 
 end
 
