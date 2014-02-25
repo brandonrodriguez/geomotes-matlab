@@ -339,9 +339,10 @@ function popupmenu5_Callback(hObject, eventdata, handles)
 global programSettings;
 motes = cellstr(get(hObject,'String'));
 n = motes{get(hObject,'Value')};
+n = str2num(n);
 programSettings.numberOfMotes = n;
-disp(['Updating number of motes to ', n, '...']);
-disp(['Program will now poll ', n, ' motes when program is stopped']);
+disp(['Updating number of motes to ', num2str(n), '...']);
+disp(['Program will now poll ', num2str(n), ' motes when program is stopped']);
 end
 
 % --- Executes during object creation, after setting all properties.
