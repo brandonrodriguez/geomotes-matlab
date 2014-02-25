@@ -22,7 +22,7 @@ function varargout = Main(varargin)
 
 % Edit the above text to modify the response to help Main
 
-% Last Modified by GUIDE v2.5 19-Feb-2014 09:21:54
+% Last Modified by GUIDE v2.5 25-Feb-2014 12:03:32
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -53,6 +53,7 @@ function closeProgram(hObject, eventdata, handles, varargin)
 
 global programSettings;
 fclose(programSettings.port);
+disp('Serial port closed.');
 delete(gcf);
 end
 
@@ -71,6 +72,11 @@ handles.output = hObject;
 % also set the default close operation to a custom function.
 global programSettings;
 
+disp('Starting program...');
+disp('Initializing to:');
+disp('  1 mote');
+disp('  Using first serial port detected...');
+disp('  Setting Baud Rate to 57600');
 programSettings.numberOfMotes = 1;
 radio = instrhwinfo('serial');
 radio = radio.AvailableSerialPorts(1);
@@ -89,18 +95,30 @@ end
 
 % Set initial parameters:
 %  Calibrate
-%  Set Frequency to 5
+%  Set Frequency to 10
 %  Set Precision to LOW
 %  Set Gain to 1
 function setRadioDefaults()
 global programSettings;
 %fprintf(programSettings.port, 'C');
-pause(1);
+%pause(1);
 %fprintf(programSettings.port, 'F1');
-pause(1);
+%pause(1);
 %fprintf(programSettings.port, 'PL');
-pause(1);
+%pause(1);
 %fprintf(programSettings.port, 'G1');
+end
+
+% Display mote acknowledgements.
+function displayResponses()
+global programSettings;
+pause(0.5*programSettings.numberOfMotes);
+for n = 1:programSettings.numberOfMotes
+    while programSettings.port.BytesAvailable > 0
+       b = fscanf(programSettings.port, '%s');
+       disp(['  ', b]);
+    end
+end
 end
 
 
@@ -124,6 +142,8 @@ function pushbutton1_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 global programSettings;
 fprintf(programSettings.port, 'R');
+disp('Broadcasting "R" (Start) to all motes');
+displayResponses();
 end
 
 
@@ -137,6 +157,9 @@ function pushbutton2_Callback(hObject, eventdata, handles)
 
 global programSettings;
 fprintf(programSettings.port, 'S');
+disp('Broadcasting "S" (Stop) to all motes');
+displayResponses();
+
 pause(1);
 programSettings.filenames = containers.Map(0, 'null');
 for n = 1:programSettings.numberOfMotes
@@ -149,7 +172,10 @@ for n = 1:programSettings.numberOfMotes
    fileID = fopen(filename, 'w');
    while programSettings.port.BytesAvailable > 0
        b = fscanf(programSettings.port, '%u');
-       if b > 8000
+       % Transmit message will be read as ASCII numbers. We don't want to
+       % write this to the file, so through out numbers in the ASCII
+       % domain.
+       if b > 128
         fprintf(fileID, '%u\n', b);
        end
        %fprintf(fileID, '%c\n', fscanf(programSettings.port, '%c'))
@@ -183,6 +209,9 @@ function pushbutton3_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 global programSettings;
 fprintf(programSettings.port, 'C');
+disp('Broadcasting "C" (Calibrate) to all motes');
+displayResponses();
+
 end
 
 
@@ -196,10 +225,14 @@ function popupmenu2_Callback(hObject, eventdata, handles)
 % Hints: contents = cellstr(get(hObject,'String')) returns popupmenu2 contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from popupmenu2
 
-value = get(hObject,'Value')
+value = get(hObject,'Value');
+frequency = cellstr(get(hObject,'String'));
+frequency = frequency{value};
 message = strcat('F', num2str(value));
 global programSettings;
 fprintf(programSettings.port, message);
+disp(['Broadcasting ', message, '(', frequency, ')', ' to all motes']);
+displayResponses();
 
 end
 
@@ -239,6 +272,9 @@ end
 
 global programSettings;
 fprintf(programSettings.port, message);
+disp(['Broadcasting ', message, ' to all motes']);
+displayResponses();
+
 end
 
 
@@ -266,10 +302,15 @@ function popupmenu4_Callback(hObject, eventdata, handles)
 % Hints: contents = cellstr(get(hObject,'String')) returns popupmenu4 contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from popupmenu4
 
-value = get(hObject,'Value');
+value = get(hObject, 'Value');
+gain = get(hObject, 'String');
+gain = gain{value};
 message = strcat('G', num2str(value));
 global programSettings;
 fprintf(programSettings.port, message);
+disp(['Broadcasting ', message, '(', gain, ')', ' to all motes']);
+displayResponses();
+
 end
 
 
@@ -286,29 +327,30 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 end
 
-% TODO(brodrigu): Add validation for this textbox.
-% edit1 = # OF MOTES
-function edit1_Callback(hObject, eventdata, handles)
-% hObject    handle to edit1 (see GCBO)
+% --- Executes on selection change in popupmenu5.
+% popupmenu5 = # OF MOTES
+function popupmenu5_Callback(hObject, eventdata, handles)
+% hObject    handle to popupmenu5 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of edit1 as text
-%        str2double(get(hObject,'String')) returns contents of edit1 as a double
+% Hints: contents = cellstr(get(hObject,'String')) returns popupmenu5 contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from popupmenu5
 global programSettings;
-motes = get(hObject,'String');
-n = str2num(motes);
+motes = cellstr(get(hObject,'String'));
+n = motes{get(hObject,'Value')};
 programSettings.numberOfMotes = n;
-
+disp(['Updating number of motes to ', n, '...']);
+disp(['Program will now poll ', n, ' motes when program is stopped']);
 end
 
 % --- Executes during object creation, after setting all properties.
-function edit1_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit1 (see GCBO)
+function popupmenu5_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to popupmenu5 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
-% Hint: edit controls usually have a white background on Windows.
+% Hint: popupmenu controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
